@@ -1,0 +1,26 @@
+# Core dependencies
+fastapi>=0.116.1
+uvicorn>=0.35.0
+sqlalchemy>=2.0.42
+pydantic>=2.11.7
+pydantic-settings>=2.10.1
+python-dotenv>=1.1.1
+
+# Testing dependencies
+pytest>=8.4.1
+pytest-cov>=5.0.0
+httpx>=0.28.1
+
+# Development dependencies
+inject>=5.3.0
+
+# Build and packaging tools
+build>=1.2.1
+wheel>=0.44.0
+setuptools>=75.0.0
+twine>=5.1.0
+
+# Documentation tools
+mkdocs>=1.5.0
+mkdocs-material>=9.5.0
+mkdocs-git-revision-date-localized-plugin>=1.2.0

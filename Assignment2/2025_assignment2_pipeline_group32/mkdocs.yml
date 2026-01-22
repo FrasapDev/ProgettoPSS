@@ -1,0 +1,82 @@
+# MkDocs Configuration for Project Documentation
+
+# Project information
+site_name: Recording API Documentation
+site_description: FastAPI User Management System with CRUD Operations
+site_author: Your Team Name
+site_url: https://gitlab.com/f.saponara/2025_assignment2_python_pipeline_group32
+
+# Repository information
+repo_name: GitLab
+repo_url: https://gitlab.com/f.saponara/2025_assignment2_python_pipeline_group32
+
+# Theme configuration
+theme:
+  name: material
+  palette:
+    # Light mode
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+
+# Documentation structure
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+  - API Documentation:
+      - User Endpoints: api/user-endpoints.md
+      - Todo Endpoints: api/todo-endpoints.md
+
+# Markdown extensions
+markdown_extensions:
+  - admonition
+  - codehilite:
+      guess_lang: false
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+# Plugins
+plugins:
+  - search
+
+# Extra CSS
+extra_css:
+  - stylesheets/extra.css
+
+# Extra configuration
+extra:
+  social:
+    - icon: fontawesome/brands/gitlab
+      link: https://gitlab.com/f.saponara/2025_assignment2_python_pipeline_group32
+    - icon: fontawesome/brands/python
+      link: https://www.python.org/

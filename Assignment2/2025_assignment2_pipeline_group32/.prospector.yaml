@@ -1,0 +1,62 @@
+strictness: medium
+
+test-warnings: false
+doc-warnings: true
+member-warnings: false
+
+autodetect: true
+
+ignore-paths:
+  - docs
+  - tests
+  - .venv
+  - venv
+  - env
+  - dist
+  - build
+  - htmlcov
+  - .pytest_cache
+  - __pycache_
+
+pylint:
+  run: true
+  disable:
+    - missing-docstring
+    - too-few-public-methods
+    - import-error           # Disable import-error as CI environment may not resolve paths correctly
+    - wrong-import-position  # Allow imports after module docstrings (PEP 8 compliant)
+    - import-self           # Allow self imports in __init__ files
+    - unnecessary-pass      # Pass statements can be useful for clarity
+    - C0111  # Missing docstring
+    - C0103  # Invalid name
+    - R0903  # Too few public methods
+
+pycodestyle:
+  run: true
+  disable:
+    - E501  # line too long
+
+pep8:
+  run: true
+  disable:
+    - E501
+
+pyflakes:
+  run: true
+
+mccabe:
+  run: true
+  max-complexity: 10
+
+pep257:
+  run: false # Disable docstring
+
+pyroma:
+  run: true
+
+bandit:
+  run: true
+
+max-line-length: 120
+
+output-format: grouped

@@ -1,0 +1,252 @@
+# Define the stages of the CI/CD pipeline
+stages:
+  - build
+  - verify
+  - test
+  - package
+  - release
+  - docs
+
+# Define variables to be used in the pipeline
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  DOCKER_IMAGE_NAME: "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+  PYTHON_VERSION: "3.13"
+
+# Cache pip packages to speed up pipeline runs
+cache:
+  paths:
+    - .cache/pip
+    - .venv/
+
+# Build stage
+build:
+  stage: build
+  image: python:3.13-slim
+  script:
+    - echo "Building with Python $PYTHON_VERSION"
+
+    - pip install --upgrade pip
+
+    - pip install -r requirements.txt
+
+    - pip list
+
+    - python -m venv .venv
+    - source .venv/bin/activate
+    - pip install -r requirements.txt
+  artifacts:
+    paths:
+      - .venv/
+    expire_in: 1 hour
+  only:
+    - master
+
+# Verify stage
+# Note: Each verification job is allowed to fail without failing the entire pipeline.
+# Quality verification job
+verify:static:
+  stage: verify
+  image: python:3.13-slim
+  dependencies:
+    - build
+  script:
+    - echo "Running static analysis"
+
+    - source .venv/bin/activate
+
+    - pip install prospector[with_pyroma]
+    - export PYTHONPATH="${CI_PROJECT_DIR}:${PYTHONPATH}"
+
+    # Run Prospector static analysis with grouped output for better readability
+    - prospector app/ --output-format grouped
+  allow_failure: true
+  only:
+    - master
+
+# Security verification job
+verify:security:
+  stage: verify
+  image: python:3.13-slim
+  dependencies:
+    - build
+  script:
+    - echo "Running security analysis"
+
+    - source .venv/bin/activate
+
+    - pip install bandit
+
+    # Run Bandit security analysis with JSON output for reporting
+    - bandit -r app/ -f json -o bandit-report.json -ll || true
+    # Also generate a human-readable text report
+    - bandit -r app/ -f txt -ll
+  artifacts:
+    # Store the security report for review
+    reports:
+      sast: bandit-report.json
+    paths:
+      - bandit-report.json
+    expire_in: 1 week
+  allow_failure: true
+  only:
+    - master
+
+
+# Dynamic verification job
+verify:dynamic:
+  stage: verify
+  image: python:3.13-slim
+  dependencies:
+    - build
+  script:
+    - echo "Running dynamic analysis"
+
+    - source .venv/bin/activate
+    
+    # Install dynamic analysis tools
+    - pip install pytest pytest-timeout pytest-xdist pytest-cov
+    
+    # Run tests with dynamic analysis features:
+    # --timeout=30: Kill tests that run longer than 30 seconds (catches infinite loops), we suppose tests should be faster
+    # --timeout-method=thread: Use threading for timeout
+    # --tb=short: Show shorter tracebacks for easier reading
+    - pytest tests/ -v --timeout=30 --timeout-method=thread --tb=short
+    
+    # Run with coverage to detect unused code paths (dynamic coverage analysis)
+    # --cov-fail-under=50: Fail if less than 50% code coverage
+    - pytest tests/ --cov=app --cov-report=term --cov-fail-under=50
+    
+  artifacts:
+    # Store dynamic analysis results
+    reports:
+      junit: junit.xml
+    when: always
+  allow_failure: true
+  only:
+    - master
+
+# Test stage
+test:
+  stage: test
+  image: python:3.13-slim
+  dependencies:
+    - build
+  script:
+    - echo "Running tests"
+
+    - source .venv/bin/activate
+
+    # Run pytest with coverage reporting
+    # -v: verbose output
+    # --cov: measure code coverage
+    # --cov-report: generate coverage report in multiple formats
+    - pytest tests/ -v --cov=app --cov-report=term --cov-report=html --cov-report=xml
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - htmlcov/
+      - coverage.xml
+    expire_in: 1 week
+  only:
+    - master
+
+# Package stage
+package:
+  stage: package
+  image: python:3.13-slim
+  dependencies:
+    - build
+  script:
+    - echo "Building package"
+
+    - source .venv/bin/activate
+
+    - pip install build wheel setuptools
+
+    # Build the package (creates both wheel and source distribution)
+    # This uses pyproject.toml configuration
+    - python -m build
+
+    - ls -lh dist/
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+  only:
+    - master
+
+# Release stage
+# Docker Release job 
+release:docker:
+  stage: release
+  image: docker:24-cli
+  services:
+    - docker:24-dind
+  dependencies:
+    - package
+  before_script:
+    # Log in to GitLab Container Registry
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - echo "Building Docker image"
+
+    # Build the Docker image using the Dockerfile
+    - docker build -t "$DOCKER_IMAGE_NAME" -t "$CI_REGISTRY_IMAGE:latest" .
+
+    # Push the Docker image to the registry with both tags
+    - docker push "$DOCKER_IMAGE_NAME"
+    - docker push "$CI_REGISTRY_IMAGE:latest"
+
+    # Display the image information
+    - echo "Docker image pushed to $DOCKER_IMAGE_NAME"
+  only:
+    - master
+
+# PyPI Release job
+release:pypi:
+  stage: release
+  image: python:3.13-slim
+  dependencies:
+    - package
+  before_script:
+    - echo "Uploading package to PyPI"
+    # Install twine to upload to PyPI
+    - pip install twine
+  script:
+    # Upload using variables for security not hardcoded
+    - twine upload --username $TWINE_USERNAME --password $TWINE_PASSWORD dist/* 
+  only:
+    - master
+  # Only run manually when there is a new version to release in PyPI
+  when: manual
+    
+
+# Documentation generation and deployment stage
+pages:
+  stage: docs
+  image: python:3.13-slim
+  dependencies:
+    - build
+  script:
+    - echo "Building documentation"
+
+    - source .venv/bin/activate
+
+    - pip install mkdocs mkdocs-material
+
+    # Build the documentation using MkDocs with strict mode and verbose output to catch any issues
+    - mkdocs build --strict --verbose
+
+    # Move the generated site to the public directory for GitLab Pages deployment
+    - mv site public
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 week
+  only:
+    - master

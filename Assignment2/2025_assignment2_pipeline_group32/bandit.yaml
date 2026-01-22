@@ -1,0 +1,50 @@
+# Bandit config
+# Security scanner
+
+exclude_dirs:
+  - /tests
+  - /test
+  - ./venv
+  - /venv
+  - /env
+  - /.pytest_cache
+  - /__pycache__
+  - /docs
+  - /htmlcov
+  - /dist
+  - /build
+  - /.git
+
+# Tests to run (leave commented to run all tests)
+# tests:
+#   - B201
+#   - B301
+
+severity: medium
+
+confidence: medium
+
+max_lines_per_issue: 100
+
+format: json
+
+# Plugins config
+plugins:
+  - bandit.plugins.blacklist
+  - bandit.plugins.crypto_request_no_cert_validation
+  - bandit.plugins.exec_as_module
+  - bandit.plugins.exec_used
+  - bandit.plugins.general_bad_file_permissions
+  - bandit.plugins.general_bind_all_interfaces
+  - bandit.plugins.general_hardcoded_password
+  - bandit.plugins.general_hardcoded_tmp
+  - bandit.plugins.injection_paramiko
+  - bandit.plugins.injection_shell
+  - bandit.plugins.injection_sql
+  - bandit.plugins.injection_wildcard
+  - bandit.plugins.insecure_ssl_tls
+  - bandit.plugins.jinja2_templates
+  - bandit.plugins.mako_templates
+  - bandit.plugins.try_except_continue
+  - bandit.plugins.try_except_pass
+  - bandit.plugins.weak_cryptographic_key
